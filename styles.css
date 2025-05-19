@@ -388,3 +388,188 @@ body.true-black #content > button:hover {
 body {
     padding-bottom: 100px;
 }
+/* Add to styles.css */
+
+/* Read/Saved post styling */
+.read-post {
+    border-left: 4px solid #4CAF50;
+}
+
+.saved-post {
+    border-left: 4px solid #FFC107;
+}
+
+.read-post.saved-post {
+    border-left: 4px solid transparent;
+    border-image: linear-gradient(to bottom, #4CAF50, #FFC107) 1;
+}
+
+/* Post preview styling */
+.post-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: #777;
+    margin-bottom: 8px;
+}
+
+.post-author {
+    font-weight: 600;
+    color: #555;
+}
+
+.post-subreddit {
+    color: #0073e6;
+}
+
+.post-score {
+    color: #ff6600;
+}
+
+.post-preview {
+    max-height: 100px;
+    overflow: hidden;
+    position: relative;
+    margin-bottom: 12px;
+}
+
+.post-preview::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 20px;
+    background: linear-gradient(transparent, white);
+}
+
+body.dark-gray .post-preview::after {
+    background: linear-gradient(transparent, #3a3a3a);
+}
+
+body.true-black .post-preview::after {
+    background: linear-gradient(transparent, #121212);
+}
+
+/* Post actions */
+.post-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.action-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    color: #777;
+    transition: color 0.2s ease, transform 0.2s ease;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.action-button:hover {
+    color: #007bff;
+    background-color: rgba(0, 123, 255, 0.1);
+    transform: scale(1.1);
+}
+
+.read-toggle {
+    color: #4CAF50;
+}
+
+.save-toggle {
+    color: #FFC107;
+}
+
+/* Blog mode navigation */
+.blog-nav {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.nav-button {
+    background-color: #f1f1f1;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    color: #333;
+}
+
+.nav-button:hover:not(:disabled) {
+    background-color: #e0e0e0;
+}
+
+.nav-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Single post actions */
+.single-post-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+/* Resume reading button */
+.resume-reading {
+    text-align: center;
+    margin: 12px 0;
+}
+
+.resume-reading button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.resume-reading button:hover {
+    background-color: #0056b3;
+}
+
+/* Mobile improvements */
+@media (max-width: 768px) {
+    .controls {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    #searchInput {
+        width: 100%;
+    }
+    
+    .blog-nav {
+        flex-wrap: wrap;
+    }
+    
+    .back-button {
+        flex: 1 0 100%;
+        margin-bottom: 8px;
+    }
+    
+    .prev-post, .next-post {
+        flex: 1;
+    }
+    
+    .post {
+        padding: 12px;
+    }
+    
+    .post h3 {
+        font-size: 1.1rem;
+    }
+}
