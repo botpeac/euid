@@ -573,3 +573,65 @@ body.true-black .post-preview::after {
         font-size: 1.1rem;
     }
 }
+/* Author filter button */
+#clearAuthorFilter {
+    background-color: #ff6600;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: none; /* Hidden by default */
+}
+
+#clearAuthorFilter:hover {
+    background-color: #e65c00;
+    transform: scale(1.05);
+}
+
+/* Clickable author styling */
+.post-author {
+    font-weight: 600;
+    color: #555;
+    cursor: pointer;
+    transition: color 0.2s ease;
+    text-decoration: underline dotted;
+    text-underline-offset: 3px;
+}
+
+.post-author:hover {
+    color: #ff6600;
+}
+
+.post-author.clickable {
+    padding: 2px 4px;
+    border-radius: 4px;
+    background-color: rgba(255, 102, 0, 0.1);
+    transition: background-color 0.2s ease;
+}
+
+.post-author.clickable:hover {
+    background-color: rgba(255, 102, 0, 0.2);
+}
+
+/* Dark mode adjustments for author elements */
+body.dark-gray .post-author {
+    color: #ddd;
+}
+
+body.dark-gray .post-author:hover,
+body.true-black .post-author:hover {
+    color: #ff8533;
+}
+
+body.dark-gray .post-author.clickable,
+body.true-black .post-author.clickable {
+    background-color: rgba(255, 133, 51, 0.2);
+}
+
+body.dark-gray .post-author.clickable:hover,
+body.true-black .post-author.clickable:hover {
+    background-color: rgba(255, 133, 51, 0.3);
+}
