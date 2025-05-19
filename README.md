@@ -35,7 +35,7 @@ The application works with NDJSON files (Newline Delimited JSON) containing post
 ```json
 {
   "title": "Post title (for posts only)",
-  "selftext" or "body": "The content text",
+  "selftext": "The content text",
   "author": "Username of the author",
   "created_utc": "Creation timestamp",
   "score": "Post score/rating",
