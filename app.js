@@ -15,11 +15,12 @@ const lineHeightSelect = document.getElementById('lineHeightSelect');
 const postCountDiv = document.getElementById('postCount');
 const paginationDiv = document.querySelector('.pagination');
 
-// New global variables for enhanced functionality
+// Global variables for enhanced functionality
 let readPosts = new Set();
 let savedPosts = new Set();
 let readingProgress = {};
 let lastReadPosition = null;
+let currentAuthorFilter = null;
 
 let rawData = [];
 let filteredData = [];
@@ -32,28 +33,44 @@ document.addEventListener('DOMContentLoaded', () => {
     loadStoredData();
     addSavedFilter();
     addResumeReadingButton();
+    addClearAuthorFilterButton();
     setupTouchGestures();
 });
 
 // Function to load stored data from localStorage
 function loadStoredData() {
-    if (localStorage.getItem('readPosts')) {
-        readPosts = new Set(JSON.parse(localStorage.getItem('readPosts')));
-    }
-    
-    if (localStorage.getItem('savedPosts')) {
-        savedPosts = new Set(JSON.parse(localStorage.getItem('savedPosts')));
-    }
-    
-    if (localStorage.getItem('readingProgress')) {
-        readingProgress = JSON.parse(localStorage.getItem('readingProgress'));
-    }
-    
-    if (localStorage.getItem('lastReadPosition')) {
-        lastReadPosition = JSON.parse(localStorage.getItem('lastReadPosition'));
+    try {
+        if (localStorage.getItem('readPosts')) {
+            readPosts = new Set(JSON.parse(localStorage.getItem('readPosts')));
+        }
+        
+        if (localStorage.getItem('savedPosts')) {
+            savedPosts = new Set(JSON.parse(localStorage.getItem('savedPosts')));
+        }
+        
+        if (localStorage.getItem('readingProgress')) {
+            readingProgress = JSON.parse(localStorage.getItem('readingProgress'));
+        }
+        
+        if (localStorage.getItem('lastReadPosition')) {
+            lastReadPosition = JSON.parse(localStorage.getItem('lastReadPosition'));
+        }
+        
+        if (localStorage.getItem('currentAuthorFilter')) {
+            currentAuthorFilter = localStorage.getItem('currentAuthorFilter');
+        }
+    } catch (error) {
+        console.error("Error loading stored data:", error);
+        // Clear potentially corrupted data
+        localStorage.removeItem('readPosts');
+        localStorage.removeItem('savedPosts');
+        localStorage.removeItem('readingProgress');
+        localStorage.removeItem('lastReadPosition');
+        localStorage.removeItem('currentAuthorFilter');
     }
 }
 
+// Color mode selection
 modeRadios.forEach(radio => {
     radio.addEventListener('change', () => {
         body.classList.remove('dark-gray', 'true-black');
@@ -64,6 +81,7 @@ modeRadios.forEach(radio => {
     });
 });
 
+// File input handling
 fileInput.addEventListener('change', () => {
     loadButton.disabled = !fileInput.files[0];
 });
@@ -71,11 +89,13 @@ fileInput.addEventListener('change', () => {
 loadButton.addEventListener('click', () => {
     const file = fileInput.files[0];
     if (!file) return;
+    
     const reader = new FileReader();
     reader.onload = e => {
         const lines = e.target.result.split('\n').filter(line => line.trim());
         rawData = [];
         let skipped = 0;
+        
         for (const line of lines) {
             try {
                 rawData.push(JSON.parse(line));
@@ -83,12 +103,14 @@ loadButton.addEventListener('click', () => {
                 skipped++;
             }
         }
+        
         contentDiv.innerHTML = skipped > 0 ? `⚠️ Skipped ${skipped} malformed entries.<br><br>` : '';
         applyFilters();
     };
     reader.readAsText(file);
 });
 
+// Filtering function
 function applyFilters() {
     const showText = showTextPosts.checked;
     const showLink = showLinkPosts.checked;
@@ -96,6 +118,7 @@ function applyFilters() {
     const query = searchInput.value.toLowerCase();
     
     filteredData = rawData.filter(item => {
+        // Filter by post type
         const isText = ('is_self' in item) ? item.is_self : !!item.selftext;
         const isLink = ('is_self' in item) ? !item.is_self : (!!item.url && !item.selftext);
         const isComment = 'body' in item && !('title' in item);
@@ -106,6 +129,10 @@ function applyFilters() {
         // Filter for saved posts if that option is checked
         if (showSavedOnly && !savedPosts.has(getPostId(item))) return false;
         
+        // Filter by author if an author filter is set
+        if (currentAuthorFilter && item.author !== currentAuthorFilter) return false;
+        
+        // Filter by search query
         const content = `${item.title || ''} ${item.selftext || ''} ${item.body || ''} ${item.author || ''}`.toLowerCase();
         return content.includes(query);
     });
@@ -113,8 +140,12 @@ function applyFilters() {
     applySorting();
     currentPage = 1;
     renderPage(currentPage);
+    
+    // Update UI to show author filter if active
+    updateAuthorFilterUI();
 }
 
+// Sorting function
 function applySorting() {
     const mode = sortBy.value;
     filteredData.sort((a, b) => {
@@ -124,6 +155,7 @@ function applySorting() {
         const scoreB = b.score || 0;
         const dateA = a.created_utc || a.created || 0;
         const dateB = b.created_utc || b.created || 0;
+        
         switch (mode) {
             case 'textLength': return lenB - lenA;
             case 'scoreAsc': return scoreA - scoreB;
@@ -135,8 +167,9 @@ function applySorting() {
     });
 }
 
+// Update post count display
 function updatePostCount() {
-    postCountDiv.textContent = `Showing ${filteredData.length} post${filteredData.length !== 1 ? 's' : ''}`;
+    postCountDiv.textContent = `Showing ${filteredData.length} post${filteredData.length !== 1 ? 's' : ''}${currentAuthorFilter ? ` by ${currentAuthorFilter}` : ''}`;
 }
 
 // Helper function to shorten text
@@ -192,7 +225,55 @@ function toggleSaved(post, element) {
     localStorage.setItem('savedPosts', JSON.stringify([...savedPosts]));
 }
 
-// Updated renderPage function with shortened posts
+// Filter posts by author
+function filterByAuthor(author) {
+    currentAuthorFilter = author;
+    localStorage.setItem('currentAuthorFilter', author);
+    applyFilters();
+    
+    // Scroll to top
+    window.scrollTo(0, 0);
+}
+
+// Clear author filter
+function clearAuthorFilter() {
+    currentAuthorFilter = null;
+    localStorage.removeItem('currentAuthorFilter');
+    applyFilters();
+    
+    // Hide the clear filter button
+    const clearFilterBtn = document.getElementById('clearAuthorFilter');
+    if (clearFilterBtn) {
+        clearFilterBtn.style.display = 'none';
+    }
+}
+
+// Update UI to show author filter status
+function updateAuthorFilterUI() {
+    const clearFilterBtn = document.getElementById('clearAuthorFilter');
+    if (clearFilterBtn) {
+        clearFilterBtn.style.display = currentAuthorFilter ? 'block' : 'none';
+    }
+}
+
+// Add clear author filter button
+function addClearAuthorFilterButton() {
+    const filterControls = document.querySelector('.controls');
+    
+    // Create the clear filter button if it doesn't exist
+    if (!document.getElementById('clearAuthorFilter')) {
+        const clearFilterBtn = document.createElement('button');
+        clearFilterBtn.id = 'clearAuthorFilter';
+        clearFilterBtn.textContent = 'Clear Author Filter';
+        clearFilterBtn.className = 'action-button clear-filter';
+        clearFilterBtn.style.display = currentAuthorFilter ? 'block' : 'none';
+        clearFilterBtn.addEventListener('click', clearAuthorFilter);
+        
+        filterControls.appendChild(clearFilterBtn);
+    }
+}
+
+// Updated renderPage function with shortened posts and clickable author names
 function renderPage(page) {
     contentDiv.innerHTML = '';
     const start = (page - 1) * pageSize;
@@ -221,7 +302,7 @@ function renderPage(page) {
                 const shortBody = shortenText(post.body, 150);
                 div.innerHTML = `
                     <div class="post-meta">
-                        <span class="post-author">${post.author || 'unknown'}</span> in 
+                        <span class="post-author" data-author="${post.author || 'unknown'}">${post.author || 'unknown'}</span> in 
                         <span class="post-subreddit">r/${post.subreddit || 'unknown'}</span>
                         <span class="post-score">${post.score ?? 0} pts</span>
                         <span class="post-date">${dateStr}</span>
@@ -241,7 +322,7 @@ function renderPage(page) {
                 div.innerHTML = `
                     <h3>${post.title || '(No Title)'}</h3>
                     <div class="post-meta">
-                        <span class="post-author">${post.author || 'unknown'}</span> in 
+                        <span class="post-author" data-author="${post.author || 'unknown'}">${post.author || 'unknown'}</span> in 
                         <span class="post-subreddit">r/${post.subreddit || 'unknown'}</span>
                         <span class="post-score">${post.score ?? 0} pts</span>
                         <span class="post-date">${dateStr}</span>
@@ -276,6 +357,13 @@ function renderPage(page) {
                 toggleSaved(post, div);
             });
             
+            // Add author click handler
+            div.querySelector('.post-author').addEventListener('click', e => {
+                e.stopPropagation();
+                const author = e.target.dataset.author;
+                filterByAuthor(author);
+            });
+            
             div.addEventListener('click', () => {
                 markAsRead(post);
                 div.classList.add('read-post');
@@ -300,7 +388,7 @@ function renderPage(page) {
     contentDiv.style.lineHeight = lineHeightSelect.value;
 }
 
-// Updated renderSinglePost function with navigation and reading progress
+// Updated renderSinglePost function with clickable author name
 function renderSinglePost(post, currentIndex) {
     lastScrollY = window.scrollY;
     contentDiv.innerHTML = '';
@@ -389,11 +477,13 @@ function renderSinglePost(post, currentIndex) {
     actionBar.appendChild(readToggle);
     actionBar.appendChild(saveToggle);
     
-    // Create post content
+    // Create post content with clickable author
+    const authorHtml = `<strong>Author:</strong> <span class="post-author clickable" data-author="${post.author || 'unknown'}">${post.author || 'unknown'}</span>`;
+    
     if (post.body && !post.title) {
         div.innerHTML = `
             <p class="post-meta">
-                <strong>Author:</strong> ${post.author || 'unknown'}<br>
+                ${authorHtml}<br>
                 <strong>Subreddit:</strong> ${post.subreddit || 'unknown'}<br>
                 <strong>Score:</strong> ${post.score ?? 0}<br>
                 <strong>Date:</strong> ${dateStr}
@@ -403,7 +493,7 @@ function renderSinglePost(post, currentIndex) {
         div.innerHTML = `
             <h3>${post.title || '(No Title)'}</h3>
             <p class="post-meta">
-                <strong>Author:</strong> ${post.author || 'unknown'}<br>
+                ${authorHtml}<br>
                 <strong>Subreddit:</strong> ${post.subreddit || 'unknown'}<br>
                 <strong>Score:</strong> ${post.score ?? 0}<br>
                 <strong>Date:</strong> ${dateStr}
@@ -428,6 +518,15 @@ function renderSinglePost(post, currentIndex) {
     
     paginationDiv.style.display = 'none';
     postCountDiv.style.display = 'none';
+    
+    // Add author click handler
+    const authorElement = div.querySelector('.post-author.clickable');
+    if (authorElement) {
+        authorElement.addEventListener('click', () => {
+            filterByAuthor(authorElement.dataset.author);
+            renderPage(1);
+        });
+    }
     
     // Save scroll position within post
     setupReadingProgressTracking(post);
@@ -462,6 +561,12 @@ function setupReadingProgressTracking(post) {
 function addResumeReadingButton() {
     if (!lastReadPosition) return;
     
+    // Remove existing button if it exists
+    const existingResumeDiv = document.querySelector('.resume-reading');
+    if (existingResumeDiv) {
+        existingResumeDiv.remove();
+    }
+    
     const resumeDiv = document.createElement('div');
     resumeDiv.className = 'resume-reading';
     
@@ -491,16 +596,19 @@ function addResumeReadingButton() {
 function addSavedFilter() {
     const filterControls = document.querySelector('.controls');
     
-    const savedFilter = document.createElement('label');
-    savedFilter.className = 'toggle';
-    savedFilter.innerHTML = '<input type="checkbox" id="showSavedOnly"> Saved Only';
-    
-    const savedCheckbox = savedFilter.querySelector('input');
-    savedCheckbox.addEventListener('change', () => {
-        applyFilters();
-    });
-    
-    filterControls.appendChild(savedFilter);
+    // Only add if it doesn't exist
+    if (!document.getElementById('showSavedOnly')) {
+        const savedFilter = document.createElement('label');
+        savedFilter.className = 'toggle';
+        savedFilter.innerHTML = '<input type="checkbox" id="showSavedOnly"> Saved Only';
+        
+        const savedCheckbox = savedFilter.querySelector('input');
+        savedCheckbox.addEventListener('change', () => {
+            applyFilters();
+        });
+        
+        filterControls.appendChild(savedFilter);
+    }
 }
 
 // Setup touch gestures for navigation
@@ -573,6 +681,7 @@ document.addEventListener('click', (e) => {
     }
 });
 
+// Pagination event listeners
 prevBtn.addEventListener('click', () => {
     if (currentPage > 1) {
         currentPage--;
@@ -587,6 +696,7 @@ nextBtn.addEventListener('click', () => {
     }
 });
 
+// Filter and display controls event listeners
 showTextPosts.addEventListener('change', applyFilters);
 showLinkPosts.addEventListener('change', applyFilters);
 sortBy.addEventListener('change', () => {
